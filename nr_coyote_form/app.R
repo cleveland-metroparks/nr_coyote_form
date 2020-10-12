@@ -14,7 +14,8 @@ ui <- fluidPage(
     "Clevelandmetroparks coyote report form",
 
     fluidRow(leafletOutput("map1", "50%", 500)),
-    fluidRow(verbatimTextOutput("Click_text"))
+    fluidRow(textInput("first_name", "First name"))
+#    fluidRow(verbatimTextOutput("Click_text"))
 
 )
 
@@ -26,12 +27,13 @@ map = leaflet() %>%
         group = "Mapbox") %>%
 #           addProviderTiles(providers$OpenTopoMap, group = "Open Topo Map") %>%
     addProviderTiles(providers$Esri.WorldImagery, group = "ESRI WorldImagery") %>%
-    setView(lng = -81.61, lat = 41.43, zoom = 11) %>%
+    setView(lng = -81.65, lat = 41.38, zoom = 10) %>%
     addLayersControl(baseGroups = c("Mapbox",
 #                                    "Open Topo Map",
                                     "ESRI WorldImagery"),
 #                                    overlayGroups = c("Polygons","Activities"),
-                     position = "bottomright")
+                     position = "bottomright") %>%
+    leaflet.extras::addSearchOSM(options = searchOptions(collapsed = FALSE))
 
 
 # Define server logic required to draw a histogram
@@ -44,13 +46,13 @@ server <- function(input, output) {
         if(is.null(click))
             return()
         text<-paste("Latitude: ", click$lat, ", Longtitude: ", click$lng)
-        text2<-paste("You've selected point ", text)
+        # text2<-paste("You've selected point ", text)
         map1_proxy = leafletProxy("map1") %>%
             clearPopups() %>%
             addPopups(click$lng, click$lat, text)
-        output$Click_text<-renderText({
-            text2
-        })
+        # output$Click_text<-renderText({
+        #     text2
+        # })
     
         
     })
