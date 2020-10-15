@@ -14,8 +14,8 @@ ui <- fluidPage(
     "Clevelandmetroparks coyote report form",
 
     fluidRow(leafletOutput("map1", "50%", 500)),
+    fluidRow(verbatimTextOutput("Click_text")),
     fluidRow(textInput("first_name", "First name"))
-#    fluidRow(verbatimTextOutput("Click_text"))
 
 )
 
@@ -31,7 +31,6 @@ map = leaflet() %>%
     addLayersControl(baseGroups = c("Mapbox",
 #                                    "Open Topo Map",
                                     "ESRI WorldImagery"),
-#                                    overlayGroups = c("Polygons","Activities"),
                      position = "bottomright") %>%
     leaflet.extras::addSearchOSM(options = searchOptions(collapsed = FALSE))
 
@@ -46,13 +45,14 @@ server <- function(input, output) {
         if(is.null(click))
             return()
         text<-paste("Latitude: ", click$lat, ", Longtitude: ", click$lng)
-        # text2<-paste("You've selected point ", text)
-        map1_proxy = leafletProxy("map1") %>%
-            clearPopups() %>%
-            addPopups(click$lng, click$lat, text)
-        # output$Click_text<-renderText({
-        #     text2
-        # })
+        text2<-paste("You've selected point ", text)
+# This works in Rstudio, but not on server since websockets are not working
+        # map1_proxy = leafletProxy("map1") %>%
+        #     clearPopups() %>%
+        #     addPopups(click$lng, click$lat, text)
+        output$Click_text<-renderText({
+            text2
+        })
     
         
     })
