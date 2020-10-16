@@ -12,15 +12,30 @@ library(leaflet)
 library(leaflet.extras)
 library(dplyr)
 
-fieldsMandatory = c("first_name", "interaction")
+# Some global variables and functions
+#  These need to be updated as form changes
+fieldsAll <- c("first_name", "last_name", "phone", "email", 
+               "incident_date", "i_time", "ampm", 
+               "interaction", "interaction_details", 
+               "sighting_information", "sighting_details", 
+               "activity_during_sighting", "activity_details", 
+               "reservation", "zip", "Latitude", "Longitude", 
+               "location_details", "additional_details")
+responsesDir <- file.path("responses")
+epochTime <- function() {
+    as.integer(Sys.time())
+}
+Latitude = as.numeric()
+Longitude = as.numeric()
 
+# Set up marking for mandatory fields
+fieldsMandatory = c("first_name", "interaction")
 labelMandatory = function(label) {
     tagList(
         label,
         span("*", class = "mandatory_star")
     )
 }
-
 appCSS =
     ".mandatory_star { color: red; }"
 
@@ -125,6 +140,7 @@ ui = fluidPage(
         "Click layers button toggle between map and image backgrounds.",
         
         leafletOutput("map1", "50%", 500),
+
         verbatimTextOutput("Click_text"),
         textAreaInput("location_details", 
                       "Additional location information",
@@ -169,6 +185,7 @@ map = leaflet() %>%
 server = function(input, output) {
 
     output$map1 = renderLeaflet(map)
+    output$i_time = renderText(strftime(input$incident_time, "%R"))
     
     observe({
         mandatoryFilled <-
@@ -179,13 +196,16 @@ server = function(input, output) {
                    logical(1))
         mandatoryFilled <- all(mandatoryFilled)
         
-        shinyjs::toggleState(id = "submit", condition = mandatoryFilled)
+        shinyjs::toggleState(id = "submit", 
+                             condition = mandatoryFilled)
     })    
     
     observe({
         click = input$map1_click
         if(is.null(click))
             return()
+        Latitude = click$lat
+        Longitude = click$lng
         text<-paste("Latitude: ", click$lat, ", Longtitude: ", click$lng)
         text2<-paste("You've selected point ", text)
         map1_proxy = leafletProxy("map1") %>%
@@ -196,6 +216,29 @@ server = function(input, output) {
         })
     
         
+    })
+
+    formData <- reactive({
+        data <- sapply(fieldsAll, function(x) input[[x]])
+        data <- c(data, timestamp = epochTime())
+        data <- t(data)
+        data
+    })
+    
+    humanTime <- function() format(Sys.time(), "%Y%m%d-%H%M%OS")
+    
+    saveData <- function(data) {
+        fileName <- sprintf("%s_%s.csv",
+                            humanTime(),
+                            digest::digest(data))
+        
+        write.csv(x = data, file = file.path(responsesDir, fileName),
+                  row.names = FALSE, quote = TRUE)
+    }
+    
+    # action to take when submit button is pressed
+    observeEvent(input$submit, {
+        saveData(formData())
     })
     
 }
