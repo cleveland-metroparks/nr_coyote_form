@@ -26,9 +26,6 @@ epochTime <- function() {
     as.integer(Sys.time())
 }
 
-# Latitude = as.numeric()
-Longitude = as.numeric()
-
 # Set up marking for mandatory fields
 fieldsMandatory = c("first_name", "interaction")
 labelMandatory = function(label) {
@@ -187,6 +184,10 @@ server = function(input, output) {
 
     output$map1 = renderLeaflet(map)
     output$i_time = renderText(strftime(input$incident_time, "%R"))
+    Latitude = NULL
+    Longitude = NULL
+    makeReactiveBinding("Latitude")
+    makeReactiveBinding("Longitude")
     
     observe({
         mandatoryFilled <-
@@ -205,16 +206,19 @@ server = function(input, output) {
         click = input$map1_click
         if(is.null(click))
             return()
-        Latitude = reactiveVal(click$lat)
-        Longitude = reactiveVal(click$lng)
-        text<-paste("Latitude: ", Latitude(), 
-                    ", Longitude: ", Longitude())
+        cl_lat = reactiveVal(click$lat)
+        cl_lng = reactiveVal(click$lng)
+        text<-paste("Latitude: ", cl_lat(), 
+                    ", Longitude: ", cl_lng())
         text2<-paste("You've selected point ", text)
         map1_proxy = leafletProxy("map1") %>%
             clearPopups() %>%
-            addPopups(Longitude(), 
-                      Latitude(), 
+            addPopups(cl_lng(), 
+                      cl_lat(), 
                       text)
+        Latitude <<- cl_lat()
+        Longitude <<- cl_lng()
+
         output$Click_text<-renderText({
             text2
         })
@@ -225,8 +229,8 @@ server = function(input, output) {
     formData <- reactive({
         data <- sapply(fieldsAll, function(x) input[[x]])
         data <- c(data, 
-                  Latitude = Latitude(),
-                  Longitude = Longitude(),
+                  Latitude = Latitude,
+                  Longitude = Longitude,
                   timestamp = epochTime())
         data <- t(data)
         data
