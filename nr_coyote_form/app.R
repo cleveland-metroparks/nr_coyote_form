@@ -11,6 +11,8 @@ library(shinyjs)
 library(leaflet)
 library(leaflet.extras)
 library(dplyr)
+library(pool)
+
 
 # Some global variables and functions
 #  These need to be updated as form changes
@@ -22,6 +24,21 @@ fieldsAll <- c("first_name", "last_name", "phone", "email",
                "reservation", "zip", "location_details", 
                "additional_details")
 responsesDir <- file.path("responses")
+
+source("loginparams.R")
+
+pool <- dbPool(
+    drv = RPostgreSQL::PostgreSQL(),
+    dbname = DBname,
+    host = Host,
+    username = User,
+    password =  Password,
+    port=Port
+)
+onStop(function() {
+    poolClose(pool)
+})
+
 epochTime <- function() {
     as.integer(Sys.time())
 }
@@ -34,9 +51,9 @@ labelMandatory = function(label) {
         span("*", class = "mandatory_star")
     )
 }
-appCSS =
-    ".mandatory_star { color: red; }"
-
+appCSS <-
+    ".mandatory_star { color: red; }
+   #error { color: red; }"
 
 # Define UI for application that draws a clickable map
 ui = fluidPage(
@@ -157,7 +174,20 @@ ui = fluidPage(
                       "Any additional information",
                       placeholder = "Additional details"),
         
-        actionButton("submit", "Submit", class = "btn-primary")
+        actionButton("submit", "Submit", class = "btn-primary"),
+        shinyjs::hidden(
+            span(id = "submit_msg", "Submitting..."),
+            div(id = "error",
+                div(br(), tags$b("Error: "), span(id = "error_msg"))
+            )
+        )
+    ),
+    shinyjs::hidden(
+        div(
+            id = "thankyou_msg",
+            h3("Thanks, your response was submitted successfully! You may be contacted for further information."),
+            actionLink("submit_another", "Submit another response")
+        )
     )
     
 
@@ -184,11 +214,9 @@ server = function(input, output) {
 
     output$map1 = renderLeaflet(map)
     output$i_time = renderText(strftime(input$incident_time, "%R"))
-    Latitude = NULL
-    Longitude = NULL
-    makeReactiveBinding("Latitude")
-    makeReactiveBinding("Longitude")
-    
+    Latitude = reactiveVal()
+    Longitude = reactiveVal()
+
     observe({
         mandatoryFilled <-
             vapply(fieldsMandatory,
@@ -216,8 +244,9 @@ server = function(input, output) {
             addPopups(cl_lng(), 
                       cl_lat(), 
                       text)
-        Latitude <<- cl_lat()
-        Longitude <<- cl_lng()
+# This is needed to get a value out of a reactive
+        Latitude(cl_lat())
+        Longitude(cl_lng())
 
         output$Click_text<-renderText({
             text2
@@ -229,8 +258,8 @@ server = function(input, output) {
     formData <- reactive({
         data <- sapply(fieldsAll, function(x) input[[x]])
         data <- c(data, 
-                  Latitude = Latitude,
-                  Longitude = Longitude,
+                  Latitude = Latitude(),
+                  Longitude = Longitude(),
                   timestamp = epochTime())
         data <- t(data)
         data
@@ -239,9 +268,13 @@ server = function(input, output) {
     humanTime <- function() format(Sys.time(), "%Y%m%d-%H%M%OS")
     
     saveData <- function(data) {
-        fileName <- sprintf("%s_%s.csv",
-                            humanTime(),
-                            digest::digest(data))
+        fileName <- sprintf("%s_%s_%s.csv", #"%s_%s_%s_%s.csv"
+                            input$first_name,
+                            input$last_name,
+                            humanTime()#, 
+# use line below if you worry about same username/same second collisions
+                            # digest::digest(data)
+                            )
         
         write.csv(x = data, file = file.path(responsesDir, fileName),
                   row.names = FALSE, quote = TRUE)
@@ -249,9 +282,30 @@ server = function(input, output) {
     
     # action to take when submit button is pressed
     observeEvent(input$submit, {
-        saveData(formData())
+        shinyjs::disable("submit")
+        shinyjs::show("submit_msg")
+        shinyjs::hide("error")
+        
+        tryCatch({
+            saveData(formData())
+            shinyjs::reset("form")
+            shinyjs::hide("form")
+            shinyjs::show("thankyou_msg")
+        },
+        error = function(err) {
+            shinyjs::html("error_msg", err$message)
+            shinyjs::show(id = "error", anim = TRUE, animType = "fade")
+        },
+        finally = {
+            shinyjs::enable("submit")
+            shinyjs::hide("submit_msg")
+        })
     })
     
+    observeEvent(input$submit_another, {
+        shinyjs::show("form")
+        shinyjs::hide("thankyou_msg")
+    }) 
 }
 
 # Run the application 
