@@ -11,32 +11,37 @@ library(shinyjs)
 library(leaflet)
 library(leaflet.extras)
 library(dplyr)
-library(pool)
-
+library(dbplyr)
+# library(pool)
+library(DBI)
 
 # Some global variables and functions
 #  These need to be updated as form changes
-fieldsAll <- c("first_name", "last_name", "phone", "email", 
-               "incident_date", "i_time", "ampm", 
-               "interaction", "interaction_details", 
+fieldsAll <- c("first_name", "last_name", "phone", "email",
+               "ampm", "interaction", "interaction_details", 
                "sighting_information", "sighting_details", 
                "activity_during_sighting", "activity_details", 
                "reservation", "zip", "location_details", 
                "additional_details")
 responsesDir <- file.path("responses")
 
-source("loginparams.R")
+# To run locally, use this one.
+# source("nr_coyote_form/loginparams_shiny.R")
+# This is where app expects it when running locally
+source("loginparams_shiny.R")
 
-pool <- dbPool(
-    drv = RPostgreSQL::PostgreSQL(),
+con = dbConnect(
+    drv = RPostgres::Postgres(),
+    # drv = RPostgreSQL::PostgreSQL(),
     dbname = DBname,
     host = Host,
-    username = User,
-    password =  Password,
+    user = User,
+    password = Password,
     port=Port
 )
 onStop(function() {
-    poolClose(pool)
+    dbDisconnect(con)
+    rm(User, Password, pos = ".GlobalEnv")
 })
 
 epochTime <- function() {
@@ -67,6 +72,10 @@ ui = fluidPage(
     div(
         id = "form",
         h3("Contact information"),
+        
+# testing to see if pool is working
+        # tableOutput("tbl"),
+
         textInput("first_name", labelMandatory("First name")),
         textInput("last_name", "Last name"),
         textInput("phone", "Phone number"),
@@ -75,8 +84,8 @@ ui = fluidPage(
         "ATTENTION: If a coyote came in contact with a human or pet, 
         the visitor should seek medical attention from a 
         doctor/veterinarian immediately!",
-        dateInput("incident_date", "Incident date"),
-        timeInput("incident_time", "Incident time", seconds = F),
+        dateInput("inc_date", "Incident date"),
+        timeInput("inc_time", "Incident time", seconds = F),
         radioButtons("ampm", "AM or PM", choices = c("AM", "PM"),
                      inline = T,
                      selected = character(0)),
@@ -212,8 +221,14 @@ map = leaflet() %>%
 # Define server logic required to draw a histogram
 server = function(input, output) {
 
+# testing to see if pool is working
+    # output$tbl = renderTable({
+    #     pool %>% 
+    #         tbl(in_schema(Schema, "coyote_report_form_view")) %>% 
+    #         head()
+    # })
+    
     output$map1 = renderLeaflet(map)
-    output$i_time = renderText(strftime(input$incident_time, "%R"))
     Latitude = reactiveVal()
     Longitude = reactiveVal()
 
@@ -255,9 +270,22 @@ server = function(input, output) {
         
     })
 
+    fileName = reactive({sprintf("%s_%s_%s.csv", #"%s_%s_%s_%s.csv"
+                        input$first_name,
+                        input$last_name,
+                        humanTime()#, 
+# use line below if you worry about same username/same second 
+#  collisions or want a nice unique key.
+                        # digest::digest(data)
+    )
+})
+    
     formData <- reactive({
         data <- sapply(fieldsAll, function(x) input[[x]])
-        data <- c(data, 
+        data <- c(filename_key = fileName(),
+                  data, 
+                  incident_date = as.character(input$inc_date),
+                  incident_time = strftime(input$inc_time, "%R"),
                   Latitude = Latitude(),
                   Longitude = Longitude(),
                   timestamp = epochTime())
@@ -266,18 +294,13 @@ server = function(input, output) {
     })
     
     humanTime <- function() format(Sys.time(), "%Y%m%d-%H%M%OS")
+    table_id = Id(schema = Schema, 
+                  table = "rshiny_test_form")
     
     saveData <- function(data) {
-        fileName <- sprintf("%s_%s_%s.csv", #"%s_%s_%s_%s.csv"
-                            input$first_name,
-                            input$last_name,
-                            humanTime()#, 
-# use line below if you worry about same username/same second collisions
-                            # digest::digest(data)
-                            )
-        
-        write.csv(x = data, file = file.path(responsesDir, fileName),
+        write.csv(x = data, file = file.path(responsesDir, fileName()),
                   row.names = FALSE, quote = TRUE)
+        dbAppendTable(con, table_id, value = data.frame(data))
     }
     
     # action to take when submit button is pressed
@@ -294,7 +317,9 @@ server = function(input, output) {
         },
         error = function(err) {
             shinyjs::html("error_msg", err$message)
-            shinyjs::show(id = "error", anim = TRUE, animType = "fade")
+            shinyjs::show(id = "error", 
+                          anim = TRUE, 
+                          animType = "fade")
         },
         finally = {
             shinyjs::enable("submit")
