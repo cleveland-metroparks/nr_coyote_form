@@ -15,21 +15,9 @@ library(dbplyr)
 # library(pool)
 library(DBI)
 
-# Some global variables and functions
-#  These need to be updated as form changes
-
-#  We may need to eliminate this method 
-#    if all lists need to be reformatted like date etc.
-fieldsAll <- c("first_name", "last_name", "phone", "email",
-               "ampm", "concern", "concern_type", 
-               "concern_details", "in_metroparks", "zip",
-               "location_details",
-               "activity_during_sighting", "activity_details", 
-               "trail",
-               "sighting_information", "sighting_details", 
-               "additional_details")
 responsesDir <- file.path("responses")
 db_table_out = "rshiny_test_form_2"
+# formData reactive in server block must be changed whenever form is modified
 
 # To run in the console, use this one.
 # source("nr_coyote_form/loginparams_shiny.R")
@@ -102,7 +90,9 @@ ui = fluidPage(
                                 "concerned"),
                     selected = character(0)),
         selectInput("concern_type", 
-                           "If you have concerns check as many as apply (skip this if you have no concerns):",
+                    "If you have concerns check as many as apply 
+                    (skip this if you have no concerns; click box to 
+                    select choices):",
                            choices = c("Coyote made physical contact with human",
                                        "Coyote made physical contact with pet",
                                        "Coyote was following",
@@ -154,7 +144,7 @@ ui = fluidPage(
         
         h3("Additional information"),
         selectInput("activity_during_sighting",
-                    "Person reporting this coyote was: (check as many as apply)",
+                    "Person reporting this coyote was: (click box and check as many as apply)",
                     choices = c("Walking", "Running",
                      "In a building",
                      "In a vehicle",
@@ -182,11 +172,9 @@ ui = fluidPage(
                       "What were you doing at time of sighting?",
                       placeholder = "Please give details about your actions when sighting occurred."),
         selectInput("sighting_information", 
-                       "Sighting information",
+                       "Sighting information (click box and select all that apply",
                        choices = c("Single coyote",
                                    "2 or more coyotes ",
-                                   "Coyote came in contact with humans",
-                                   "Coyote came in contact with humans",
                                    "Shy/Wary/Cautious",
                                    "Bold/Unafraid",
                                    "Other (explain below)"),
@@ -304,19 +292,52 @@ server = function(input, output) {
                         # digest::digest(data)
     )
 })
-    
-    formData <- reactive({
-        data <- sapply(fieldsAll, function(x) input[[x]])
-        data <- c(filename_key = fileName(),
-                  data, 
-                  incident_date = as.character(input$inc_date),
-                  incident_time = strftime(input$inc_time, "%R"),
-                  Latitude = Latitude(),
-                  Longitude = Longitude(),
-                  timestamp = epochTime())
-        data <- t(data)
+
+    formData = reactive({
+        data = c(filename_key = fileName(),
+                   first_name = input$first_name,
+                   last_name = input$last_name,
+                   phone = input$phone,
+                   email = input$email,
+                   concern = input$concern,
+                   concern_type = paste(input$concern_type,
+                                        collapse = "|"),
+                   concern_details = input$concern_details,
+                   in_metroparks = input$in_metroparks,
+                   zip = input$zip,
+                   location_details = input$location_details,
+                   activity_during_sighting =
+                       paste(input$activity_during_sighting,
+                             collapse = "|"),
+                   activity_details = input$activity_details,
+                   trail = input$trail,
+                   sighting_information =
+                       paste(input$sighting_information,
+                             collapse = "|"),
+                   sighting_details = input$sighting_details,
+                   additional_details = input$additional_details,
+                   Latitude = Latitude(),
+                   Longitude = Longitude(),
+                   timestamp = epochTime()
+                   )
+        data = t(data)
         data
     })
+
+    # formData <- reactive({
+    #     data1 <- sapply(fieldsSimple, function(x) input[[x]])
+    #     data2 = sapply(fieldsCombine, function(x) paste(input[[x]],
+    #                                                     collapse = "|"))
+    #     data <- c(filename_key = fileName(),
+    #               data1, data2,
+    #               incident_date = as.character(input$inc_date),
+    #               incident_time = strftime(input$inc_time, "%R"),
+    #               Latitude = Latitude(),
+    #               Longitude = Longitude(),
+    #               timestamp = epochTime())
+    #     data <- t(data)
+    #     data
+    # })
     
     humanTime <- function() format(Sys.time(), "%Y%m%d-%H%M%OS")
     table_id = Id(schema = Schema, 
@@ -326,6 +347,7 @@ server = function(input, output) {
         write.csv(x = data, file = file.path(responsesDir, fileName()),
                   row.names = FALSE, quote = TRUE)
         dbAppendTable(con, table_id, value = data.frame(data))
+        # dbAppendTable(con, table_id, value = data)
     }
     
     # action to take when submit button is pressed
