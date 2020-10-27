@@ -17,17 +17,23 @@ library(DBI)
 
 # Some global variables and functions
 #  These need to be updated as form changes
+
+#  We may need to eliminate this method 
+#    if all lists need to be reformatted like date etc.
 fieldsAll <- c("first_name", "last_name", "phone", "email",
-               "ampm", "interaction", "interaction_details", 
-               "sighting_information", "sighting_details", 
+               "ampm", "concern", "concern_type", 
+               "concern_details", "in_metroparks", "zip",
+               "location_details",
                "activity_during_sighting", "activity_details", 
-               "reservation", "zip", "location_details", 
+               "trail",
+               "sighting_information", "sighting_details", 
                "additional_details")
 responsesDir <- file.path("responses")
+db_table_out = "rshiny_test_form_2"
 
-# To run locally, use this one.
+# To run in the console, use this one.
 # source("nr_coyote_form/loginparams_shiny.R")
-# This is where app expects it when running locally
+# This is where app expects it when running locally or on the server
 source("loginparams_shiny.R")
 
 con = dbConnect(
@@ -49,7 +55,7 @@ epochTime <- function() {
 }
 
 # Set up marking for mandatory fields
-fieldsMandatory = c("first_name", "interaction")
+fieldsMandatory = c("first_name", "concern")
 labelMandatory = function(label) {
     tagList(
         label,
@@ -66,93 +72,64 @@ ui = fluidPage(
     shinyjs::inlineCSS(appCSS),
     
     titlePanel("Clevelandmetroparks coyote report form"),
-    "Mandatory information marked with ",
+    "Mandatory information marked with red star",
            labelMandatory(" "),
-           " must be entered before you can submit.",
+           " must be entered before you can submit.", br(),
     div(
         id = "form",
         h3("Contact information"),
-        
-# testing to see if pool is working
-        # tableOutput("tbl"),
-
+        "If you would like to be contacted by wildlife staff,
+        please enter a phone number or email.", br(),
         textInput("first_name", labelMandatory("First name")),
         textInput("last_name", "Last name"),
         textInput("phone", "Phone number"),
         textInput("email", "Email"),
+        
         h3("Incident information"),
-        "ATTENTION: If a coyote came in contact with a human or pet, 
-        the visitor should seek medical attention from a 
-        doctor/veterinarian immediately!",
+        tags$span(style="color:red", "ATTENTION: If a coyote came in contact with 
+        a human or pet, the visitor should seek medical 
+        attention from a doctor/veterinarian immediately!"), br(),
         dateInput("inc_date", "Incident date"),
         timeInput("inc_time", "Incident time", seconds = F),
         radioButtons("ampm", "AM or PM", choices = c("AM", "PM"),
                      inline = T,
                      selected = character(0)),
-        checkboxGroupInput("interaction", 
-                           labelMandatory("Coyote Interaction"),
-                           choices = c("Coyote howling",
-                                       "Coyote sighting",
-                                       "Human attack",
-                                       "Pet attack",
-                                       "Other"),
-                           inline = T,
+        selectInput("concern", labelMandatory("Why are you reporting a coyote?"),
+                    choices = c("Choose one option" = "",
+                                "I saw or heard a coyote (no concerns)" =
+                                "no concern",
+                                "I have a concern about a coyote (please check concerns below)" =
+                                "concerned"),
+                    selected = character(0)),
+        selectInput("concern_type", 
+                           "If you have concerns check as many as apply (skip this if you have no concerns):",
+                           choices = c("Coyote made physical contact with human",
+                                       "Coyote made physical contact with pet",
+                                       "Coyote was following",
+                                       "Coyote was barking",
+                                       "Coyote was growling",
+                                       "Coyote approached without fear",
+                                       "Coyote stood its ground and would not move",
+                                       "Coyote looked sick or injured",
+                                       "Other (explain below)"),
+                           multiple = T,
                            selected = character(0)),
-        textAreaInput("interaction_details", 
-                      "Additional information",
-                      placeholder = "Additional details"),
-        checkboxGroupInput("sighting_information", 
-                           "Sighting information",
-                           choices = c("Single coyote",
-                                       "2 or more coyotes",
-                                       "Coyote came in contact with humans",
-                                       "Coyote came in contact with humans",
-                                       "Shy/Cautious",
-                                       "Aggressive/Angry",
-                                       "Other"),
-                           inline = F,
-                           selected = character(0)),
-        textAreaInput("sighting_details",
-                      "Explain choices above",
-                      placeholder = "Please give details about any interaction"),
-        checkboxGroupInput("activity_during_sighting",
-                           "What were you doing at time of sighting?",
-                           choices = c("Alone",
-                                       "With children",
-                                       "with other adults",
-                                       "Bicycling",
-                                       "On horseback",
-                                       "Tending horses",
-                                       "Walking dog(s) on leash",
-                                       "Walking dog(s) off leash",
-                                       "Other"),
-                           inline = F,
-                           selected = character(0)),
-        textAreaInput("activity_details",
-                      "What were you doing at time of sighting?",
-                      placeholder = "Please give details about your actions when sighting occurred."),
+        textAreaInput("concern_details", 
+                      "Additional information about concern:",
+                      placeholder = "Additional details about encounter"),
 
-        h3("Incident location"),
-        selectInput("reservation",
-                    "Reservation (if applicable)",
-                    choices = c("None chosen",
-                                "Acacia",
-                                "Bedford",
-                                "Big Creek",
-                                "Bradley Woods",
-                                "Brecksville",
-                                "Brookside",
-                                "Euclid Creek",
-                                "Garfield Park",
-                                "Hinckley",
-                                "Huntington",
-                                "Lakefront",
-                                "Mill Stream Run",
-                                "North Chagrin",
-                                "Ohio and Erie Canal",
-                                "Rocky River",
-                                "South Chagrin",
-                                "Washington")),
+        h3("Location of encounter"),
+        tags$em("Please use the online mapping function"),
+        "and provide 
+        any additional location information below.", br(),
+        selectInput("in_metroparks",
+                    "Was this coyote within, adjacent to, or outside of Cleveland Metroparks?",
+                    choices = c("Choose one option" = "",
+                                "Within" = "within",
+                                "Adjacent to (next to Cleveland Metroparks)" = 
+                                    "adjacent",
+                                "Outside of Cleveland Metroparks" = "outside"),
+                    selected = character(0)),
         numericInput("zip", "Sighting zip code (if known)",
                      value = NULL, min = 10000, max = 99999),
         
@@ -161,27 +138,75 @@ ui = fluidPage(
         "or", br(),
         "  * type address with city into search bar,", br(),
         "then click location on map to record coordinates of sighting.", br(),
-        "Click layers button toggle between map and image backgrounds.",
+        "Click layers button toggle between map and image backgrounds.", br(),
+        "NOTE: coordinates are not recorded unless you click on the map.",
+        br(),
         
         leafletOutput("map1", "50%", 500),
 
         verbatimTextOutput("Click_text"),
         textAreaInput("location_details", 
                       "Additional location information",
-                      placeholder = "Please add any additional location details."),
+                      placeholder = "Possible additional information:  
+                      address, reservation, trail segment or picnic 
+                      area name, be as specific as possible, note 
+                      any landmarks"),
         
         h3("Additional information"),
-        "Describe the coyote(s) including size, color, 
-        coat condition, tail position. What did the coyote do? Where 
-        did it go? What did you do? If an attack or confrontation 
-        occurred, describe the number of victims (human or pet), 
-        age, and sex of victims(s), the activity of the coyote(s) 
-        prior to the attack, the activity of the victim(s) prior 
-        to the attack, defensive actions taken by victim(s) or 
-        bystanders, and any injuries sustained.",
+        selectInput("activity_during_sighting",
+                    "Person reporting this coyote was: (check as many as apply)",
+                    choices = c("Walking", "Running",
+                     "In a building",
+                     "In a vehicle",
+                     "Bicycling",
+                     "On horseback",
+                     "Tending horses",
+                     "Walking dog(s) on leash",
+                     "Walking dog(s) off leash",
+                     "Other (explain below)"),
+                    multiple = T,
+                    selected = character(0)),
+        textAreaInput("activity_details",
+                      "What were you doing at time of sighting?",
+                      placeholder = "Please give details about your actions when sighting occurred."),
+        selectInput("trail",
+                    "If oudoors in Cleveland Metroparks were you",
+                    choices = c("Choose one option" = "",
+                                "On a trail or in parking lot" =
+                                    "trail",
+                                "Off of a trail" = "off trail",
+                                "Other (explain below)" =
+                                    "other"),
+                    selected = character(0)),
+        textAreaInput("activity_details",
+                      "What were you doing at time of sighting?",
+                      placeholder = "Please give details about your actions when sighting occurred."),
+        selectInput("sighting_information", 
+                       "Sighting information",
+                       choices = c("Single coyote",
+                                   "2 or more coyotes ",
+                                   "Coyote came in contact with humans",
+                                   "Coyote came in contact with humans",
+                                   "Shy/Wary/Cautious",
+                                   "Bold/Unafraid",
+                                   "Other (explain below)"),
+                       multiple = T,
+                       selected = character(0)),
+        textAreaInput("sighting_details",
+                  "Explain choices above",
+                  placeholder = "Please give details about any interaction"),
+    
+        
+        "Optional:  Describe the coyote(s) including coat color, 
+        coat condition, tail position. Feel free to add additional 
+        details about the encounter here.", br(),
         textAreaInput("additional_details", 
                       "Any additional information",
                       placeholder = "Additional details"),
+        
+        "Mandatory information marked with red star",
+        labelMandatory(" "),
+        " must be entered before you can submit.", br(),
         
         actionButton("submit", "Submit", class = "btn-primary"),
         shinyjs::hidden(
@@ -295,7 +320,7 @@ server = function(input, output) {
     
     humanTime <- function() format(Sys.time(), "%Y%m%d-%H%M%OS")
     table_id = Id(schema = Schema, 
-                  table = "rshiny_test_form")
+                  table = db_table_out)
     
     saveData <- function(data) {
         write.csv(x = data, file = file.path(responsesDir, fileName()),
