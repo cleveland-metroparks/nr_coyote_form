@@ -12,7 +12,6 @@ library(leaflet)
 library(leaflet.extras)
 library(dplyr)
 library(dbplyr)
-# library(pool)
 library(DBI)
 
 responsesDir <- file.path("responses")
@@ -218,11 +217,13 @@ map = leaflet() %>%
         urlTemplate = "//{s}.tiles.mapbox.com/v3/jcheng.map-5ebohr46/{z}/{x}/{y}.png",
         attribution = 'Maps by <a href="http://www.mapbox.com/">Mapbox</a>',
         group = "Mapbox") %>%
-#           addProviderTiles(providers$OpenTopoMap, group = "Open Topo Map") %>%
+    addProviderTiles(providers$Stamen.Terrain, group = "Stadia Outdoors") %>%
+    addProviderTiles(providers$OpenTopoMap, group = "Open Topo Map") %>%
     addProviderTiles(providers$Esri.WorldImagery, group = "ESRI WorldImagery") %>%
     setView(lng = -81.65, lat = 41.38, zoom = 10) %>%
     addLayersControl(baseGroups = c("Mapbox",
-#                                    "Open Topo Map",
+                                    "Stadia Outdoors",
+                                    "Open Topo Map",
                                     "ESRI WorldImagery"),
                      position = "bottomright") %>%
     leaflet.extras::addSearchOSM(options = searchOptions(collapsed = FALSE))
