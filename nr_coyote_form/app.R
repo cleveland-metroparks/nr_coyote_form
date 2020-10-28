@@ -217,13 +217,13 @@ map = leaflet() %>%
         urlTemplate = "//{s}.tiles.mapbox.com/v3/jcheng.map-5ebohr46/{z}/{x}/{y}.png",
         attribution = 'Maps by <a href="http://www.mapbox.com/">Mapbox</a>',
         group = "Mapbox") %>%
-    addProviderTiles(providers$Stamen.Terrain, group = "Stadia Outdoors") %>%
-    addProviderTiles(providers$OpenTopoMap, group = "Open Topo Map") %>%
+    addProviderTiles(providers$Stamen.Terrain, group = "Stamen Terrain") %>%
+    # addProviderTiles(providers$OpenTopoMap, group = "Open Topo Map") %>%
     addProviderTiles(providers$Esri.WorldImagery, group = "ESRI WorldImagery") %>%
     setView(lng = -81.65, lat = 41.38, zoom = 10) %>%
     addLayersControl(baseGroups = c("Mapbox",
-                                    "Stadia Outdoors",
-                                    "Open Topo Map",
+                                    "Stamen.Terrain",
+                                    # "Open Topo Map",
                                     "ESRI WorldImagery"),
                      position = "bottomright") %>%
     leaflet.extras::addSearchOSM(options = searchOptions(collapsed = FALSE))
@@ -232,13 +232,6 @@ map = leaflet() %>%
 # Define server logic required to draw a histogram
 server = function(input, output) {
 
-# testing to see if pool is working
-    # output$tbl = renderTable({
-    #     pool %>% 
-    #         tbl(in_schema(Schema, "coyote_report_form_view")) %>% 
-    #         head()
-    # })
-    
     output$map1 = renderLeaflet(map)
     Latitude = reactiveVal()
     Longitude = reactiveVal()
