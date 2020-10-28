@@ -42,7 +42,7 @@ epochTime <- function() {
 }
 
 # Set up marking for mandatory fields
-fieldsMandatory = c("first_name", "concern")
+fieldsMandatory = c("last_name", "concern", "in_metroparks")
 labelMandatory = function(label) {
     tagList(
         label,
@@ -67,15 +67,15 @@ ui = fluidPage(
         h3("Contact information"),
         "If you would like to be contacted by wildlife staff,
         please enter a phone number or email.", br(),
-        textInput("first_name", labelMandatory("First name")),
-        textInput("last_name", "Last name"),
+        textInput("first_name", "First name"),
+        textInput("last_name", labelMandatory("Last name")),
         textInput("phone", "Phone number"),
         textInput("email", "Email"),
         
         h3("Incident information"),
         tags$span(style="color:red", "ATTENTION: If a coyote came in contact with 
-        a human or pet, the visitor should seek medical 
-        attention from a doctor/veterinarian immediately!"), br(),
+        a human or pet, that person should seek medical 
+        attention from a doctor/veterinarian immediately!"), br(), br(),
         dateInput("inc_date", "Incident date"),
         timeInput("inc_time", "Incident time", seconds = F),
         radioButtons("ampm", "AM or PM", choices = c("AM", "PM"),
@@ -88,11 +88,12 @@ ui = fluidPage(
                                 "I have a concern about a coyote (please check concerns below)" =
                                 "concerned"),
                     selected = character(0)),
+# Make conditional on answer above
         selectInput("concern_type", 
                     "If you have concerns check as many as apply 
-                    (skip this if you have no concerns; click box to 
-                    select choices):",
-                           choices = c("Coyote made physical contact with human",
+                    (skip this if you have no concerns):",
+                           choices = c("Choose one or more options" = "",
+                                       "Coyote made physical contact with human",
                                        "Coyote made physical contact with pet",
                                        "Coyote was following",
                                        "Coyote was barking",
@@ -103,61 +104,64 @@ ui = fluidPage(
                                        "Other (explain below)"),
                            multiple = T,
                            selected = character(0)),
+# Make conditional on selecting Other above
         textAreaInput("concern_details", 
                       "Additional information about concern:",
-                      placeholder = "Additional details about encounter"),
+                      placeholder = "Why did you select Other above?"),
 
         h3("Location of encounter"),
         tags$em("Please use the online mapping function"),
-        "and provide 
-        any additional location information below.", br(),
+        "and provide any additional location information below.", br(), br(),
         selectInput("in_metroparks",
-                    "Was this coyote within, adjacent to, or outside of Cleveland Metroparks?",
+                    labelMandatory("Was this coyote within, adjacent to, 
+                                   or outside of Cleveland Metroparks?"),
                     choices = c("Choose one option" = "",
-                                "Within" = "within",
-                                "Adjacent to (next to Cleveland Metroparks)" = 
+                                "Within Cleveland Metroparks" = "within",
+                                "Adjacent to or next to Cleveland Metroparks" = 
                                     "adjacent",
                                 "Outside of Cleveland Metroparks" = "outside"),
                     selected = character(0)),
         numericInput("zip", "Sighting zip code (if known)",
                      value = NULL, min = 10000, max = 99999),
-        
-        "Instructions:  Either", br(),
-        "  * click, drag, and zoom map to location", br(),
+        hr(),
+        h4("Map instructions:"),
+        "Either", br(),
+        "  1. click, drag, and zoom map to location", br(),
         "or", br(),
-        "  * type address with city into search bar,", br(),
-        "then click location on map to record coordinates of sighting.", br(),
-        "Click layers button toggle between map and image backgrounds.", br(),
-        "NOTE: coordinates are not recorded unless you click on the map.",
-        br(),
-        
+        "  2. type address with city into search bar,", br(),
+        "then click location on map to record coordinates of sighting.", br(), br(),
+        "To toggle between map and image backgrounds, click layers button.", br(), br(),
+        strong("NOTE: coordinates are not recorded unless you click on the map."),
+        br(), br(),
         leafletOutput("map1", "50%", 500),
-
         verbatimTextOutput("Click_text"),
+        hr(), br(),
         textAreaInput("location_details", 
-                      "Additional location information",
-                      placeholder = "Possible additional information:  
-                      address, reservation, trail segment or picnic 
-                      area name, be as specific as possible, note 
-                      any landmarks"),
+                      "Additional location information (optional)",
+                      placeholder = "Address, trail or picnic area name, be as specific as possible, note any landmarks"),
         
         h3("Additional information"),
         selectInput("activity_during_sighting",
-                    "Person reporting this coyote was: (click box and check as many as apply)",
-                    choices = c("Walking", "Running",
-                     "In a building",
-                     "In a vehicle",
+                    "Person reporting this coyote was:",
+                    choices = list("Choose one or more options" = "",
+                     `Outdoor activities` = list("Walking", 
+                     "Running",
                      "Bicycling",
                      "On horseback",
                      "Tending horses",
                      "Walking dog(s) on leash",
-                     "Walking dog(s) off leash",
-                     "Other (explain below)"),
+                     "Walking dog(s) off leash"),
+                     `Other activities` = list(
+                     "In a building",
+                     "In a vehicle",
+                     "Other (explain below)")),
                     multiple = T,
                     selected = character(0)),
+# Make conditional on selecting Other above
         textAreaInput("activity_details",
                       "What were you doing at time of sighting?",
-                      placeholder = "Please give details about your actions when sighting occurred."),
+                      placeholder = "Why did you select Other above?"),
+# Make conditional on selecting outdoor activity above
         selectInput("trail",
                     "If oudoors in Cleveland Metroparks were you",
                     choices = c("Choose one option" = "",
@@ -168,29 +172,31 @@ ui = fluidPage(
                                     "other"),
                     selected = character(0)),
         selectInput("sighting_information", 
-                       "Sighting information (click box and select all that apply",
-                       choices = c("Single coyote",
+                       "Sighting information",
+                       choices = c("Choose one or more options" = "",
+                                   "Single coyote",
                                    "2 or more coyotes ",
                                    "Shy/Wary/Cautious",
                                    "Bold/Unafraid",
                                    "Other (explain below)"),
                        multiple = T,
                        selected = character(0)),
-        textAreaInput("sighting_details",
+# Make conditional on selecting Other above
+    textAreaInput("sighting_details",
                   "Explain choices above",
-                  placeholder = "Please give details about any interaction"),
+                  placeholder = "Why did you select Other in the above two questions?"),
     
         
         "Optional:  Describe the coyote(s) including coat color, 
         coat condition, tail position. Feel free to add additional 
-        details about the encounter here.", br(),
+        details about the encounter here.", br(), br(),
         textAreaInput("additional_details", 
                       "Any additional information",
                       placeholder = "Additional details"),
         
         "Mandatory information marked with red star",
         labelMandatory(" "),
-        " must be entered before you can submit.", br(),
+        " must be entered before you can submit.", br(), br(),
         
         actionButton("submit", "Submit", class = "btn-primary"),
         shinyjs::hidden(
