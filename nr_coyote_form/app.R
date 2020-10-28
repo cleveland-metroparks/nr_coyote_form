@@ -168,9 +168,6 @@ ui = fluidPage(
                                 "Other (explain below)" =
                                     "other"),
                     selected = character(0)),
-        textAreaInput("activity_details",
-                      "What were you doing at time of sighting?",
-                      placeholder = "Please give details about your actions when sighting occurred."),
         selectInput("sighting_information", 
                        "Sighting information (click box and select all that apply",
                        choices = c("Single coyote",
