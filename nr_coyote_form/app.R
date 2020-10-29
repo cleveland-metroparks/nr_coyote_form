@@ -88,7 +88,6 @@ ui = fluidPage(
                                 "I have a concern about a coyote (please check concerns below)" =
                                 "concerned"),
                     selected = character(0)),
-# Make conditional on answer above
         conditionalPanel(condition = "input.concern == 'concerned'",
             selectInput("concern_type", 
                     "What are your concerns?",
@@ -104,7 +103,6 @@ ui = fluidPage(
                                        "Other (explain below)"),
                            multiple = T,
                            selected = character(0)),
-# Make conditional on selecting Other above
           conditionalPanel(condition = "input.concern_type.includes('Other (explain below)')",
             textAreaInput("concern_details", 
                       "Additional information about concern:",
@@ -135,9 +133,9 @@ ui = fluidPage(
         "To toggle between map and image backgrounds, click layers button.", br(), br(),
         strong("NOTE: coordinates are not recorded unless you click on the map."),
         br(), br(),
-        leafletOutput("map1", "50%", 500),
+        leafletOutput("map1", "80%", 500),
         verbatimTextOutput("Click_text"),
-        hr(), br(),
+        hr(),
         textAreaInput("location_details", 
                       "Additional location information (optional)",
                       placeholder = "Address, trail or picnic area name, be as specific as possible, note any landmarks"),
@@ -149,7 +147,6 @@ ui = fluidPage(
                                 "Outdoors",
                                 "In a building",
                                 "In a vehicle")),
-# Make conditional on selecting outdoor activity above
         conditionalPanel(condition = 
                      "input.outdoors == 'Outdoors'",
             selectInput("activity_outdoors",
@@ -165,7 +162,6 @@ ui = fluidPage(
                         "Other (explain below)"),
                 multiple = T,
                 selected = character(0)),
-# Make conditional on selecting Other above
             conditionalPanel(condition = 
                              "input.activity_outdoors.includes('Other (explain below)')",
                 textAreaInput("activity_details",
@@ -192,7 +188,6 @@ ui = fluidPage(
                                    "Other (explain below)"),
                        multiple = T,
                        selected = character(0)),
-# Make conditional on selecting Other above
         conditionalPanel(condition = 
                      "((input.trail == 'other') || (input.sighting_information.includes('Other (explain below)')))",
             textAreaInput("sighting_details",
@@ -338,7 +333,7 @@ server = function(input, output) {
         data
     })
 
-    # This approach would be nice, but fails for some reason
+    # This approach would be nice, but fails for some reason related to data2
     # formData <- reactive({
     #     data1 <- sapply(fieldsSimple, function(x) input[[x]])
     #     data2 = sapply(fieldsCombine, function(x) paste(input[[x]],
