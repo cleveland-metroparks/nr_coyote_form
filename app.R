@@ -20,9 +20,6 @@ db_table_out = "rshiny_test_form_2"
 
 # formData reactive in server block must be changed whenever form is modified
 
-# To run in the console, use this one.
-# source("nr_coyote_form/loginparams_shiny.R")
-# This is where app expects it when running locally or on the server
 source("loginparams_shiny.R")
 
 con = dbConnect(
