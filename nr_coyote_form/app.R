@@ -51,7 +51,7 @@ labelMandatory = function(label) {
 }
 appCSS <-
     ".mandatory_star { color: red; }
-   #error { color: red; }"
+     #error { color: red; }"
 
 # Define UI for application that draws a clickable map
 ui = fluidPage(
@@ -89,9 +89,9 @@ ui = fluidPage(
                                 "concerned"),
                     selected = character(0)),
 # Make conditional on answer above
-        selectInput("concern_type", 
-                    "If you have concerns check as many as apply 
-                    (skip this if you have no concerns):",
+        conditionalPanel(condition = "input.concern == 'concerned'",
+            selectInput("concern_type", 
+                    "What are your concerns?",
                            choices = c("Choose one or more options" = "",
                                        "Coyote made physical contact with human",
                                        "Coyote made physical contact with pet",
@@ -105,10 +105,12 @@ ui = fluidPage(
                            multiple = T,
                            selected = character(0)),
 # Make conditional on selecting Other above
-        textAreaInput("concern_details", 
+          conditionalPanel(condition = "input.concern_type.includes('Other (explain below)')",
+            textAreaInput("concern_details", 
                       "Additional information about concern:",
-                      placeholder = "Why did you select Other above?"),
-
+                      placeholder = "Why did you select Other above?")
+          )
+        ),
         h3("Location of encounter"),
         tags$em("Please use the online mapping function"),
         "and provide any additional location information below.", br(), br(),
@@ -141,36 +143,45 @@ ui = fluidPage(
                       placeholder = "Address, trail or picnic area name, be as specific as possible, note any landmarks"),
         
         h3("Additional information"),
-        selectInput("activity_during_sighting",
+        selectInput("outdoors", 
                     "Person reporting this coyote was:",
-                    choices = list("Choose one or more options" = "",
-                     `Outdoor activities` = list("Walking", 
-                     "Running",
-                     "Bicycling",
-                     "On horseback",
-                     "Tending horses",
-                     "Walking dog(s) on leash",
-                     "Walking dog(s) off leash"),
-                     `Other activities` = list(
-                     "In a building",
-                     "In a vehicle",
-                     "Other (explain below)")),
-                    multiple = T,
-                    selected = character(0)),
-# Make conditional on selecting Other above
-        textAreaInput("activity_details",
-                      "What were you doing at time of sighting?",
-                      placeholder = "Why did you select Other above?"),
+                    choices = c("Choose one option" = "",
+                                "Outdoors",
+                                "In a building",
+                                "In a vehicle")),
 # Make conditional on selecting outdoor activity above
-        selectInput("trail",
+        conditionalPanel(condition = 
+                     "input.outdoors == 'Outdoors'",
+            selectInput("activity_outdoors",
+                "Activity while outdoors:",
+                choices = c("Choose one or more options" = "",
+                        "Walking",
+                        "Walking dog(s) on leash",
+                        "Walking dog(s) off leash",
+                        "Running",
+                        "Bicycling",
+                        "On horseback",
+                        "Tending horses",
+                        "Other (explain below)"),
+                multiple = T,
+                selected = character(0)),
+# Make conditional on selecting Other above
+            conditionalPanel(condition = 
+                             "input.activity_outdoors.includes('Other (explain below)')",
+                textAreaInput("activity_details",
+                      "What were you doing at time of sighting?",
+                      placeholder = "Why did you select Other above?")
+            ),
+            selectInput("trail",
                     "If oudoors in Cleveland Metroparks were you",
                     choices = c("Choose one option" = "",
-                                "On a trail or in parking lot" =
-                                    "trail",
+                                "On a trail" = "trail",
+                                "Parking lot" = "parking lot",
                                 "Off of a trail" = "off trail",
                                 "Other (explain below)" =
                                     "other"),
-                    selected = character(0)),
+                    selected = character(0))
+        ),
         selectInput("sighting_information", 
                        "Sighting information",
                        choices = c("Choose one or more options" = "",
@@ -182,10 +193,12 @@ ui = fluidPage(
                        multiple = T,
                        selected = character(0)),
 # Make conditional on selecting Other above
-    textAreaInput("sighting_details",
+        conditionalPanel(condition = 
+                     "((input.trail == 'other') || (input.sighting_information.includes('Other (explain below)')))",
+            textAreaInput("sighting_details",
                   "Explain choices above",
-                  placeholder = "Why did you select Other in the above two questions?"),
-    
+                  placeholder = "Why did you select Other in either of your last two above?")
+        ),
         
         "Optional:  Describe the coyote(s) including coat color, 
         coat condition, tail position. Feel free to add additional 
@@ -303,8 +316,9 @@ server = function(input, output) {
                    in_metroparks = input$in_metroparks,
                    zip = input$zip,
                    location_details = input$location_details,
-                   activity_during_sighting =
-                       paste(input$activity_during_sighting,
+                   outdoors = input$outdoors,
+                   activity_outdoors =
+                       paste(input$activity_outdoors,
                              collapse = "|"),
                    activity_details = input$activity_details,
                    trail = input$trail,
@@ -313,6 +327,9 @@ server = function(input, output) {
                              collapse = "|"),
                    sighting_details = input$sighting_details,
                    additional_details = input$additional_details,
+                   incident_date = as.character(input$inc_date),
+                   incident_time = strftime(input$inc_time, "%R"),
+                   ampm = input$ampm,
                    Latitude = Latitude(),
                    Longitude = Longitude(),
                    timestamp = epochTime()
@@ -321,6 +338,7 @@ server = function(input, output) {
         data
     })
 
+    # This approach would be nice, but fails for some reason
     # formData <- reactive({
     #     data1 <- sapply(fieldsSimple, function(x) input[[x]])
     #     data2 = sapply(fieldsCombine, function(x) paste(input[[x]],
