@@ -284,22 +284,24 @@ server = function(input, output) {
         output$Click_text<-renderText({
             text2
         })
-    
-        
     })
 
-    fileName = reactive({sprintf("%s_%s_%s.csv", #"%s_%s_%s_%s.csv"
-                        input$first_name,
-                        input$last_name,
-                        humanTime()#, 
+    recordID = reactive({
+        sprintf(
+# Comment out one of these depending on if you are saving a file locally or not
+            "%s_%s_%s", # If not saving file locally
+            # "%s_%s_%s.csv", # or "%s_%s_%s_%s.csv" if saving locally
+            input$first_name,
+            input$last_name,
+            humanTime()#, 
 # use line below if you worry about same username/same second 
-#  collisions or want a nice unique key.
+#  collisions or want a nice unique key. Also change format of sprintf above
                         # digest::digest(data)
-    )
-})
+        )
+    })
 
     formData = reactive({
-        data = c(filename_key = fileName(),
+        data = c(record_id = recordID(),
                    first_name = input$first_name,
                    last_name = input$last_name,
                    phone = input$phone,
@@ -338,7 +340,7 @@ server = function(input, output) {
     #     data1 <- sapply(fieldsSimple, function(x) input[[x]])
     #     data2 = sapply(fieldsCombine, function(x) paste(input[[x]],
     #                                                     collapse = "|"))
-    #     data <- c(filename_key = fileName(),
+    #     data <- c(record_id = recordID(),
     #               data1, data2,
     #               incident_date = as.character(input$inc_date),
     #               incident_time = strftime(input$inc_time, "%R"),
@@ -354,8 +356,9 @@ server = function(input, output) {
                   table = db_table_out)
     
     saveData <- function(data) {
-        write.csv(x = data, file = file.path(responsesDir, fileName()),
-                  row.names = FALSE, quote = TRUE)
+# Keeping this for debugging. Also change format of recordID above
+        # write.csv(x = data, file = file.path(responsesDir, recordID()),
+        #           row.names = FALSE, quote = TRUE)
         dbAppendTable(con, table_id, value = data.frame(data))
         # dbAppendTable(con, table_id, value = data)
     }
