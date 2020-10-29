@@ -205,11 +205,11 @@ ui = fluidPage(
         labelMandatory(" "),
         " must be entered before you can submit.", br(), br(),
         
-        actionButton("submit", "Submit", class = "btn-primary"),
+        actionButton("submit", "Submit", class = "btn-primary"), br(),
         shinyjs::hidden(
             span(id = "submit_msg", "Submitting..."),
             div(id = "error",
-                div(br(), tags$b("Error: "), span(id = "error_msg"))
+                div(br(), tags$b("Error: "), span(id = "error_msg"), br())
             )
         )
     ),
@@ -217,7 +217,7 @@ ui = fluidPage(
         div(
             id = "thankyou_msg",
             h3("Thanks, your response was submitted successfully! You may be contacted for further information."),
-            actionLink("submit_another", "Submit another response"),br()
+            actionLink("submit_another", "Submit another response")
         )
     )
     
