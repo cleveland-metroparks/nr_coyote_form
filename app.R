@@ -217,7 +217,7 @@ ui = fluidPage(
         div(
             id = "thankyou_msg",
             h3("Thanks, your response was submitted successfully! You may be contacted for further information."),
-            actionLink("submit_another", "Submit another response")
+            actionLink("submit_another", "Submit another response"),br()
         )
     )
     
@@ -269,8 +269,8 @@ server = function(input, output) {
         cl_lat = reactiveVal(click$lat)
         cl_lng = reactiveVal(click$lng)
         text<-paste("Latitude: ", cl_lat(), 
-                    ", Longitude: ", cl_lng())
-        text2<-paste("You've selected point ", text)
+                    "\nLongitude: ", cl_lng())
+        text2<-paste0("You've selected point\n", text)
         map1_proxy = leafletProxy("map1") %>%
             clearPopups() %>%
             addPopups(cl_lng(), 
