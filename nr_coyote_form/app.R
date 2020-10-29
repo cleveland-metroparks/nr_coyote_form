@@ -14,8 +14,10 @@ library(dplyr)
 library(dbplyr)
 library(DBI)
 
-responsesDir <- file.path("responses")
 db_table_out = "rshiny_test_form_2"
+# un-comment this and sections for saving to file locally for /testing/debugging
+# responsesDir <- file.path("responses")
+
 # formData reactive in server block must be changed whenever form is modified
 
 # To run in the console, use this one.
